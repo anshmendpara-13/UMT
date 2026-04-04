@@ -1,0 +1,10 @@
+Flask
+gunicorn
+flask-bcrypt
+pandas
+numpy
+pdfplumber
+reportlab
+openpyxl
+PyPDF2
+
