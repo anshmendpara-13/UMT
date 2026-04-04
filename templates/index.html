@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lavanya Tool - Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+    font-family: 'Poppins', sans-serif;
+    background: #0f0f0f;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.checkbox-item b {
+     color: #ffcc00
+}
+
+input{
+    padding-left:10px;
+}
+
+.card {
+    background: #1c1c1c;
+    padding: 28px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 650px;
+    border: 1px solid #2a2a2a;
+}
+
+/* TOP */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.user { color: #ffcc00; }
+
+.logout-btn {
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+h2 {
+    text-align: center;
+    color: #ffcc00;
+}
+
+/* SWITCH */
+.switcher {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    background: #2a2a2a;
+    color: white;
+    border: 1px solid #333;
+    margin-bottom: 20px;
+}
+
+/* SECTION */
+.section {
+    display: none;
+    padding: 20px;
+    border-radius: 12px;
+    background: #151515;
+}
+
+.section.active { display: block; }
+
+label {
+    color: #aaa;
+    font-size: 13px;
+    margin-top: 10px;
+    display: block;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px 0px;
+    margin-top: 6px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #2a2a2a;
+    color: white;
+}
+
+/* CHECKBOX GRID */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+select {
+    padding-left: 10px;   /* 👈 space from left */
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    background: #2a2a2a;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid #333;
+}
+
+.checkbox-item input {
+    width: auto;
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.checkbox-item:hover {
+    border-color: #ffcc00;
+}
+
+/* BUTTON */
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    background: #ffcc00;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:hover { background: #ffd633; }
+
+/* SMALL BTN */
+.small-btn {
+    background: #2a2a2a;
+    color: #ffcc00;
+    border: 1px solid #333;
+}
+
+.small-btn:hover {
+    background: #333;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <div class="top-bar">
+        <div class="user">👤 {{ user }}</div>
+        <a href="/logout"><button class="logout-btn">Logout</button></a>
+    </div>
+
+    <h2>Lavanya Infotech</h2>
+
+    <!-- SWITCH -->
+    <select class="switcher" onchange="switchFeature(this.value)">
+        <option value="report">📊 Generate Report</option>
+        <option value="label">📦 Sort Labels</option>
+    </select>
+
+    <!-- ================= REPORT ================= -->
+    <div id="report" class="section active">
+
+        <form action="/generate-report" method="POST" enctype="multipart/form-data">
+
+            <label>Account</label>
+            <select id="account_report" name="account_select">
+                <option value="">Select Account</option>
+                {% for acc in accounts %}
+                    <option value="{{ acc }}">{{ acc }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- DOWNLOAD EXCEL -->
+            <button type="button" class="small-btn" onclick="downloadExcel('account_report')">
+                📥 Download Last Excel
+            </button>
+
+            <label>New Account</label>
+            <input type="text" name="new_account">
+
+            <label>Manifest PDF</label>
+            <input type="file" name="manifest" required>
+
+            <label>Training Excel</label>
+            <input type="file" name="train">
+
+            <button type="submit">Generate Report</button>
+        </form>
+    </div>
+
+    <!-- ================= LABEL ================= -->
+    <div id="label" class="section">
+
+        <form action="/sort-labels" method="POST" enctype="multipart/form-data">
+
+            <label>Account</label>
+            <select id="account_label" name="account_select">
+                <option value="">Select Account</option>
+                {% for acc in accounts %}
+                    <option value="{{ acc }}">{{ acc }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- DOWNLOAD EXCEL -->
+            <button type="button" class="small-btn" onclick="downloadExcel('account_label')">
+                📥 Download Last Excel
+            </button>
+
+            <label>Label PDF</label>
+            <input type="file" name="label" required>
+
+            <label>Select Courier</label>
+
+            <!-- SELECT ALL -->
+            <div class="checkbox-item">
+                <input type="checkbox" onclick="toggleAll(this)">
+                <b>Select All</b>
+            </div>
+
+            <div class="checkbox-group" id="courierList">
+
+                <label class="checkbox-item">
+                    <input type="checkbox" name="courier" value="Delhivery">
+                    Delhivery
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" name="courier" value="Valmo">
+                    Valmo
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" name="courier" value="ValmoPlus">
+                    ValmoPlus
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" name="courier" value="Xpressbees">
+                    Xpressbees
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" name="courier" value="Shadowfax">
+                    Shadowfax
+                </label>
+
+            </div>
+
+            <button type="submit">Sort Labels</button>
+        </form>
+    </div>
+
+</div>
+
+<script>
+function switchFeature(value) {
+    document.getElementById("report").classList.remove("active");
+    document.getElementById("label").classList.remove("active");
+    document.getElementById(value).classList.add("active");
+}
+
+// DOWNLOAD EXCEL
+function downloadExcel(selectId) {
+    let acc = document.getElementById(selectId).value;
+
+    if (!acc) {
+        alert("Select account first");
+        return;
+    }
+
+    window.location.href = "/download-train/" + acc;
+}
+
+// SELECT ALL CHECKBOX
+function toggleAll(master) {
+    let checkboxes = document.querySelectorAll('#courierList input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+}
+</script>
+
+</body>
+</html>
