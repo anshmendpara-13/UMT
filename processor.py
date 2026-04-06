@@ -85,7 +85,7 @@ def match_and_group(mapping, manifest_data):
                     matched = True
                     break
             if matched:
-                break  # stop checking other groups
+                break
 
     return result
 
@@ -97,24 +97,22 @@ def generate_pdf(result, output_path):
     doc = SimpleDocTemplate(output_path)
     styles = getSampleStyleSheet()
 
-    # 🔥 TITLE STYLE
     title = ParagraphStyle(
         "title",
         parent=styles["Title"],
         alignment=TA_LEFT,
         fontSize=20,
-        leading=26,   # 👈 line spacing
-        spaceAfter=8  # 👈 space after heading
+        leading=26,
+        spaceAfter=8
     )
 
-    # 🔥 NORMAL TEXT STYLE
     normal = ParagraphStyle(
         "normal",
         parent=styles["Normal"],
         alignment=TA_LEFT,
         fontSize=16,
-        leading=22,     # 👈 line spacing
-        spaceAfter=6    # 👈 space between lines 🔥
+        leading=22,
+        spaceAfter=6
     )
 
     elements = []
@@ -127,9 +125,8 @@ def generate_pdf(result, output_path):
             elements.append(Paragraph(f"{sub} → {qty}", normal))
             total += qty
 
-        elements.append(Spacer(1, 16))  # 👈 space between sections
+        elements.append(Spacer(1, 16))
 
-    # 🔥 TOTAL STYLE
     total_style = ParagraphStyle(
         "total",
         parent=styles["Title"],
@@ -145,14 +142,18 @@ def generate_pdf(result, output_path):
 
 
 # =========================================================
-# 🔥 LABEL SORT LOGIC (FIXED + IMPROVED)
+# 🔥 LABEL SORT LOGIC (FULL FIXED COURIER SYSTEM)
 # =========================================================
+
+def normalize_courier(text):
+    return re.sub(r"\s+", "", str(text).lower())
+
 
 def extract_label_data(text):
     if not text:
         return None, 1, "Other"
 
-    text = text.strip()
+    text = re.sub(r"\s+", " ", text).strip()
 
     # -------------------------
     # QUANTITY
@@ -163,31 +164,39 @@ def extract_label_data(text):
         qty = int(match.group(1))
 
     # -------------------------
-    # COURIER DETECTION
+    # COURIER DETECTION (FIXED)
     # -------------------------
-    partners = ['Delhivery', 'Valmo', 'ValmoPlus', 'Ecom Express', 'Xpressbees', 'Shadowfax']
-    courier = "Other"
+    partners = {
+        "delhivery": "Delhivery",
+        "valmo": "Valmo",
+        "valmoplus": "ValmoPlus",
+        "ecomexpress": "Ecom Express",
+        "xpressbees": "Xpress Bees",
+        "shadowfax": "Shadowfax"
+    }
 
-    for p in partners:
-        if p.lower() in text.lower():
-            courier = p
+    courier = "Other"
+    clean_text_courier = normalize_courier(text)
+
+    for key, value in partners.items():
+        if key in clean_text_courier:
+            courier = value
             break
 
     # -------------------------
-    # SKU EXTRACTION (ROBUST)
+    # SKU EXTRACTION
     # -------------------------
     sku = None
 
-    # Method 1: Order No block
     order_match = re.search(
         r"Order\s*No\.?\s*(.*?)\s*(Free\s*Size|Size)",
         text,
         re.IGNORECASE | re.DOTALL
     )
+
     if order_match:
         sku = " ".join(order_match.group(1).split())
 
-    # Method 2: SKU block fallback
     if not sku:
         sku_match = re.search(r"SKU\s*(.*?)\s*Size", text, re.IGNORECASE | re.DOTALL)
         if sku_match:
@@ -203,13 +212,11 @@ def get_sorted_indices(pages, df):
     final = []
     used = set()
 
-    # 1. BULK FIRST
     for p in pages:
         if p["qty"] > 1:
             final.append(p["index"])
             used.add(p["index"])
 
-    # 2. EXCEL PRIORITY
     for col in df.columns:
         skus = df[col].dropna().astype(str).str.strip().tolist()
 
@@ -220,7 +227,6 @@ def get_sorted_indices(pages, df):
                         final.append(p["index"])
                         used.add(p["index"])
 
-    # 3. REMAINING
     for p in pages:
         if p["index"] not in used:
             final.append(p["index"])
@@ -238,9 +244,6 @@ def process_sort_pipeline(pdf_path, excel_path, selected_couriers=None, output_d
 
     all_pages = []
 
-    # -------------------------
-    # EXTRACT ALL LABEL DATA
-    # -------------------------
     for i, page in enumerate(reader.pages):
         text = page.extract_text() or ""
 
@@ -254,10 +257,15 @@ def process_sort_pipeline(pdf_path, excel_path, selected_couriers=None, output_d
         })
 
     # -------------------------
-    # FILTER COURIERS
+    # FILTER COURIERS (FIXED)
     # -------------------------
     if selected_couriers:
-        pages = [p for p in all_pages if p["courier"] in selected_couriers]
+        selected_set = set(normalize_courier(c) for c in selected_couriers)
+
+        pages = [
+            p for p in all_pages
+            if normalize_courier(p["courier"]) in selected_set
+        ]
     else:
         pages = all_pages
 
@@ -269,9 +277,6 @@ def process_sort_pipeline(pdf_path, excel_path, selected_couriers=None, output_d
     # -------------------------
     indices = get_sorted_indices(pages, df)
 
-    # -------------------------
-    # OUTPUT NAME
-    # -------------------------
     today = datetime.now().strftime("%Y-%m-%d")
 
     if not selected_couriers:
@@ -283,9 +288,6 @@ def process_sort_pipeline(pdf_path, excel_path, selected_couriers=None, output_d
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, name)
 
-    # -------------------------
-    # WRITE PDF (FIXED)
-    # -------------------------
     writer = PdfWriter()
 
     for idx in indices:
