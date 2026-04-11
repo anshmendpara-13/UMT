@@ -152,6 +152,16 @@ button:hover { background: #ffd633; }
 .small-btn:hover {
     background: #333;
 }
+
+.flash {
+    background: #3d2a00;
+    border: 1px solid #ffcc00;
+    color: #ffcc00;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
 </style>
 </head>
 
@@ -166,6 +176,14 @@ button:hover { background: #ffd633; }
 
     <h2>Lavanya Infotech</h2>
 
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="flash">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <!-- SWITCH -->
     <select class="switcher" onchange="switchFeature(this.value)">
         <option value="report">📊 Generate Report</option>
@@ -178,7 +196,7 @@ button:hover { background: #ffd633; }
         <form action="/generate-report" method="POST" enctype="multipart/form-data">
 
             <label>Account</label>
-            <select id="account_report" name="account_select">
+            <select id="account_report" name="account_select" onchange="syncReportAccountPick()">
                 <option value="">Select Account</option>
                 {% for acc in accounts %}
                     <option value="{{ acc }}">{{ acc }}</option>
@@ -190,8 +208,8 @@ button:hover { background: #ffd633; }
                 📥 Download Last Excel
             </button>
 
-            <label>New Account</label>
-            <input type="text" name="new_account">
+            <label>New Account <span style="color:#666;font-weight:400">(only when Select Account is empty)</span></label>
+            <input type="text" name="new_account" id="new_account_report" autocomplete="off" oninput="syncReportNewAccountType()">
 
             <label>Manifest PDF</label>
             <input type="file" name="manifest" required>
@@ -268,6 +286,22 @@ button:hover { background: #ffd633; }
 </div>
 
 <script>
+function syncReportAccountPick() {
+    var sel = document.getElementById("account_report");
+    var inp = document.getElementById("new_account_report");
+    if (sel && inp && sel.value) {
+        inp.value = "";
+    }
+}
+
+function syncReportNewAccountType() {
+    var sel = document.getElementById("account_report");
+    var inp = document.getElementById("new_account_report");
+    if (sel && inp && inp.value.trim()) {
+        sel.value = "";
+    }
+}
+
 function switchFeature(value) {
     document.getElementById("report").classList.remove("active");
     document.getElementById("label").classList.remove("active");

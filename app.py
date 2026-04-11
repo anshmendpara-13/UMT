@@ -81,14 +81,15 @@ def generate_report():
 
     username = session["user"]
 
-    # ACCOUNT
-    account_select = request.form.get("account_select", "")
-    new_account = request.form.get("new_account", "")
+    # ACCOUNT — prefer dropdown so switching accounts works; leftover text in
+    # "New account" must not override an explicit selection.
+    account_select = request.form.get("account_select", "").strip()
+    new_account = request.form.get("new_account", "").strip()
 
-    if new_account.strip():
-        account_name = clean_name(new_account)
-    elif account_select.strip():
+    if account_select:
         account_name = clean_name(account_select)
+    elif new_account:
+        account_name = clean_name(new_account)
     else:
         flash("❌ Select or create account")
         return redirect("/")
@@ -101,6 +102,11 @@ def generate_report():
         flash("❌ Manifest PDF required")
         return redirect("/")
 
+    manifest_name = secure_filename(manifest.filename)
+    if not manifest_name:
+        flash("❌ Invalid manifest file name")
+        return redirect("/")
+
     # PATHS
     user_path = os.path.join(ACCOUNTS_FOLDER, username)
     account_path = os.path.join(user_path, account_name)
@@ -110,7 +116,6 @@ def generate_report():
     os.makedirs(upload_path, exist_ok=True)
 
     # SAVE MANIFEST
-    manifest_name = secure_filename(manifest.filename)
     manifest_path = os.path.join(upload_path, manifest_name)
     manifest.save(manifest_path)
 
@@ -130,7 +135,8 @@ def generate_report():
         manifest_data = extract_from_pdf(manifest_path)
         result = match_and_group(mapping, manifest_data)
     except Exception as e:
-        return f"❌ Processing error: {str(e)}"
+        flash(f"❌ Processing error: {str(e)}")
+        return redirect("/")
 
     # OUTPUT
     output_dir = os.path.join(account_path, "outputs")
@@ -139,7 +145,11 @@ def generate_report():
     filename = f"{account_name}_report_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.pdf"
     output_path = os.path.join(output_dir, filename)
 
-    generate_pdf(result, output_path)
+    try:
+        generate_pdf(result, output_path)
+    except Exception as e:
+        flash(f"❌ PDF error: {str(e)}")
+        return redirect("/")
 
     return send_file(output_path, as_attachment=True, download_name=filename)
 
@@ -169,6 +179,11 @@ def sort_labels():
         flash("❌ Label PDF required")
         return redirect("/")
 
+    label_name = secure_filename(label_file.filename)
+    if not label_name:
+        flash("❌ Invalid label file name")
+        return redirect("/")
+
     # MULTI COURIER
     selected_couriers = request.form.getlist("courier")
     if not selected_couriers:
@@ -191,7 +206,6 @@ def sort_labels():
     upload_path = os.path.join(UPLOAD_FOLDER, username)
     os.makedirs(upload_path, exist_ok=True)
 
-    label_name = secure_filename(label_file.filename)
     label_path = os.path.join(upload_path, label_name)
     label_file.save(label_path)
 
@@ -217,12 +231,14 @@ def sort_labels():
         )
 
         if not os.path.exists(temp_output):
-            return "❌ Output not generated"
+            flash("❌ Output not generated")
+            return redirect("/")
 
         os.replace(temp_output, final_output_path)
 
     except Exception as e:
-        return f"❌ Sorting error: {str(e)}"
+        flash(f"❌ Sorting error: {str(e)}")
+        return redirect("/")
 
     return send_file(final_output_path, as_attachment=True, download_name=filename)
 
