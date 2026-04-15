@@ -5,7 +5,8 @@ import os
 
 auth = Blueprint("auth", __name__)
 
-USER_FILE = "user.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USER_FILE = os.path.join(BASE_DIR, "user.json")
 
 
 # -------------------------

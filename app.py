@@ -18,7 +18,7 @@ app = Flask(__name__)
 # -------------------------
 # SESSION CONFIG
 # -------------------------
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "LAX"
 
